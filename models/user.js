@@ -1,13 +1,18 @@
-const mysql = require('mysql2/promise');
-const databaseConfig = require('../config/database');
+const { Pool } = require('pg');
+require('dotenv').config();
 
-const pool = mysql.createPool(databaseConfig);
-
+const pool = new Pool({
+  user: process.env.PGUSER,
+  host: process.env.PGHOST,
+  database: process.env.PGDATABASE,
+  password: process.env.PGPASSWORD,
+  port: process.env.PGPORT,
+});
 
 const findByEmail = async (email) => {
   try {
-    const [rows] = await pool.execute('SELECT * FROM users WHERE email = ?', [email]);
-    return rows[0];
+    const res = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    return res.rows[0]; // PostgreSQL menyimpan hasil di rows
   } catch (error) {
     console.error('Error finding user by email:', error);
     throw error;
@@ -16,14 +21,16 @@ const findByEmail = async (email) => {
 
 const createUser = async (email, passwordHash, username) => {
   try {
-    // Jika username undefined/null/kosong, isi dengan string kosong
     const usernameSafe = (!username || typeof username === 'undefined' || username === null) ? '' : username;
+
     console.log('Register params:', { emailSafe: email, passwordHashSafe: passwordHash, usernameSafe });
-    const [result] = await pool.execute(
-      'INSERT INTO users (email, password_hash, username) VALUES (?, ?, ?)',
+
+    const res = await pool.query(
+      'INSERT INTO users (email, password_hash, username) VALUES ($1, $2, $3) RETURNING id',
       [email, passwordHash, usernameSafe]
     );
-    return result.insertId;
+
+    return res.rows[0].id;
   } catch (error) {
     console.error('Error creating user:', error);
     throw error;
