@@ -6,4 +6,7 @@ module.exports = {
   password: process.env.PGPASSWORD,
   database: process.env.PGDATABASE,
   port: process.env.PGPORT || 5432,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 };
